@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, Response
-from pydantic import BaseModel, Field
-from typing import Optional
-
+from models import TaskCreate, TaskUpdate  
+ 
 app = FastAPI(title="Task API")
 
 tasks = [
@@ -9,13 +8,6 @@ tasks = [
     {"id": 2, "title": "Complete FlyRank assignment", "done": False},
     {"id": 3, "title": "Learn FastAPI", "done": True}
 ]
-
-class TaskCreate(BaseModel):
-    title: str = Field(..., min_length=1, description="The title of the task cannot be empty")
-
-class TaskUpdate(BaseModel):
-    title: Optional[str] = None
-    done: Optional[bool] = None
 
 @app.get("/")
 def read_root():
@@ -76,7 +68,6 @@ def update_task(task_id: int, task_input: TaskUpdate):
                 task["done"] = task_input.done
                 
             return task
-
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, 
         detail=f"Task {task_id} not found"
@@ -88,7 +79,6 @@ def delete_task(task_id: int):
         if task["id"] == task_id:
             tasks.pop(index)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-            
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, 
         detail=f"Task {task_id} not found"
