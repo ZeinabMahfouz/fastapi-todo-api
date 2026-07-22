@@ -26,3 +26,59 @@ SELECT COUNT(*) FROM tasks;
 -- Fetch completed tasks
 SELECT * FROM tasks WHERE done = 1;
 
+# FastAPI Task API with Containerized PostgreSQL
+
+A FastAPI Task CRUD application running against a PostgreSQL database inside Docker Compose.
+
+## 🚀 Quick Start (One Command)
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/ZeinabMahfouz/fastapi-todo-api.git](https://github.com/ZeinabMahfouz/fastapi-todo-api.git)
+   cd fastapi-todo-api
+   ```
+
+2. Copy the environment variables example:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Start the entire stack with a single command:
+   ```bash
+   docker compose up --build
+   ```
+
+The API will be available at `http://localhost:8000`.
+
+---
+
+## 📌 API Endpoints
+
+| Method | Endpoint | Description | Status Codes |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/` | API Root Info | `200` |
+| **GET** | `/health` | DB Health check | `200` |
+| **GET** | `/tasks` | Get all tasks | `200` |
+| **GET** | `/tasks/{id}` | Get task by ID | `200`, `404` |
+| **POST** | `/tasks` | Create new task | `201`, `400` |
+| **PUT** | `/tasks/{id}` | Update task | `200`, `400`, `404` |
+| **DELETE** | `/tasks/{id}` | Delete task | `204`, `404` |
+
+---
+
+## 🧪 Sample Request (curl)
+
+```bash
+curl -i http://localhost:8000/tasks
+```
+
+---
+
+## 💾 Database Persistence & Verification
+
+To verify that tasks are stored inside PostgreSQL running in the container:
+
+```bash
+docker exec -it fastapi-todo-api-db-1 psql -U postgres -d tasks -c "SELECT * FROM tasks;"
+```
+
