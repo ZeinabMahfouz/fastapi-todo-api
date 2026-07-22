@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Response
 from models import TaskCreate, TaskUpdate
 
 app = FastAPI(title="Task API with SQLite")
@@ -83,7 +83,6 @@ def get_task(task_id: int):
     task["done"] = bool(task["done"])
     return task
 
-# 1. إضافة مهمة جديدة إلى قاعدة البيانات (INSERT INTO)
 @app.post("/tasks", status_code=status.HTTP_201_CREATED)
 def create_task(task_input: TaskCreate):
     title = task_input.title.strip()
@@ -95,12 +94,8 @@ def create_task(task_input: TaskCreate):
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # تنفيذ أمر الإضافة مع إبقاء done مساوياً لـ 0 (False) افتراضياً
     cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (title, 0))
     conn.commit()
-    
-    # جلب الـ ID الذي أنشأته قاعدة البيانات تلقائياً
     new_id = cursor.lastrowid
     conn.close()
     
@@ -109,3 +104,70 @@ def create_task(task_input: TaskCreate):
         "title": title,
         "done": False
     }
+
+# 1. تحديث مهمة باستخدام SQL UPDATE
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task_input: TaskUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # البحث عن المهمة أولاً لتأكيد وجودها
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+    existing_task = cursor.fetchone()
+    
+    if existing_task is None:
+        conn.close()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Task {task_id} not found"
+        )
+        
+    current_title = existing_task["title"]
+    current_done = existing_task["done"]
+    
+    # تحديد القيم الجديدة مع التحقق
+    new_title = current_title
+    if task_input.title is not None:
+        cleaned_title = task_input.title.strip()
+        if not cleaned_title:
+            conn.close()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Title cannot be empty"
+            )
+        new_title = cleaned_title
+        
+    new_done = int(task_input.done) if task_input.done is not None else current_done
+    
+    # تنفيذ التحديث في قاعدة البيانات
+    cursor.execute("""
+        UPDATE tasks SET title = ?, done = ? WHERE id = ?
+    """, (new_title, new_done, task_id))
+    conn.commit()
+    conn.close()
+    
+    return {
+        "id": task_id,
+        "title": new_title,
+        "done": bool(new_done)
+    }
+
+# 2. حذف مهمة باستخدام SQL DELETE
+@app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(task_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+    if cursor.fetchone() is None:
+        conn.close()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Task {task_id} not found"
+        )
+        
+    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
