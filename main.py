@@ -8,7 +8,7 @@ DB_NAME = "tasks.db"
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row  # لإرجاع النتائج كـ Dictionaries سهلة الاستخدام مع FastAPI
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
@@ -52,7 +52,6 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-# 1. جلب كل المهام من قاعدة البيانات
 @app.get("/tasks")
 def get_tasks():
     conn = get_db_connection()
@@ -61,15 +60,11 @@ def get_tasks():
     rows = cursor.fetchall()
     conn.close()
     
-    # تحويل نتائج قاعدة البيانات إلى مصفوفة قواميس (List of Dicts)
     tasks_list = [dict(row) for row in rows]
-    # تحويل قيمة done من 0/1 إلى True/False
     for task in tasks_list:
         task["done"] = bool(task["done"])
-        
     return tasks_list
 
-# 2. جلب مهمة واحدة بواسطة الـ ID مع استعلام معالج (Parameterized Query)
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
     conn = get_db_connection()
@@ -87,3 +82,30 @@ def get_task(task_id: int):
     task = dict(row)
     task["done"] = bool(task["done"])
     return task
+
+# 1. إضافة مهمة جديدة إلى قاعدة البيانات (INSERT INTO)
+@app.post("/tasks", status_code=status.HTTP_201_CREATED)
+def create_task(task_input: TaskCreate):
+    title = task_input.title.strip()
+    if not title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Title cannot be empty"
+        )
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # تنفيذ أمر الإضافة مع إبقاء done مساوياً لـ 0 (False) افتراضياً
+    cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (title, 0))
+    conn.commit()
+    
+    # جلب الـ ID الذي أنشأته قاعدة البيانات تلقائياً
+    new_id = cursor.lastrowid
+    conn.close()
+    
+    return {
+        "id": new_id,
+        "title": title,
+        "done": False
+    }
