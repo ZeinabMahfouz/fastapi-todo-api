@@ -14,3 +14,15 @@
 ### 3. What details I missed in the prompt that the AI decided on:
 * I did not explicitly define the exact schema or wording for the error details and exception messages.
 * The AI took the initiative to structure the error responses autonomously, deciding on a format like: `detail=f"Task {task_id} not found"`.
+
+## Database Explorer (Stage 4)
+
+Executed manual SQL queries using DB Browser for SQLite:
+
+```sql
+-- Count total tasks
+SELECT COUNT(*) FROM tasks;
+
+-- Fetch completed tasks
+SELECT * FROM tasks WHERE done = 1;
+
